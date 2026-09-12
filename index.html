@@ -240,16 +240,20 @@ function recalc(){
     var q = qtyBase($("wt"+k).value, $("unit"+k).value);
     var cur = $("cur"+k).value;
     var d = dim($("unit"+k).value);
-    var ok = price > 0 && q > 0 && rates && rates[cur] && rates[base];
+    var ratesOK = rates && rates[cur] && rates[base];
+    var priceOK = price > 0 && ratesOK;
+    var qtyOK = q > 0;
     out[k] = {
-      total: ok ? toBase(price, cur, base) : NaN,
-      per:   ok ? toBase(price, cur, base)/q : NaN,
+      priceOK: priceOK, qtyOK: qtyOK,
+      total: priceOK ? toBase(price, cur, base) : NaN,
+      per:   priceOK && qtyOK ? toBase(price, cur, base)/q : NaN,
       dim: d, wt: parseFloat($("wt"+k).value), unit: $("unit"+k).value
     };
-    $("pack"+k).textContent = ok ? money(out[k].total) : "—";
+    $("pack"+k).textContent = priceOK ? money(out[k].total) : "—";
   });
 
   var aOK = isFinite(out.A.per), bOK = isFinite(out.B.per);
+  var aPriceOK = out.A.priceOK, bPriceOK = out.B.priceOK;
   var sameDim = out.A.dim === out.B.dim;
   if (aOK && bOK) {
     $("perunit").textContent = fmtUnit(out.A.per, out.A.dim) + (sameDim ? " · " : "  |  ") + fmtUnit(out.B.per, out.B.dim);
@@ -261,11 +265,27 @@ function recalc(){
   v.classList.remove("tie");
   var diffs = $("diffs");
   diffs.innerHTML = "";
-  if (!(aOK && bOK)) { v.textContent = "Enter price + quantity for both products"; return; }
+  if (!(aPriceOK && bPriceOK)) { v.textContent = "Enter both prices"; return; }
 
   if (!sameDim) {
     v.textContent = "⚠️ A is " + (out.A.dim === "V" ? "volume" : "weight") + ", B is " + (out.B.dim === "V" ? "volume" : "weight") + " — pack prices only, no unit-price ranking";
     v.classList.add("tie");
+    return;
+  }
+
+  var aCheap = out.A.total < out.B.total || (out.A.total === out.B.total && out.A.per < out.B.per);
+  var better = aCheap ? out.A : out.B;
+  var worse  = aCheap ? out.B : out.A;
+
+  if (!(aOK && bOK)) {
+    // same-quantity mode with no quantity entered: prices alone decide
+    var pPct = (1 - Math.min(out.A.total, out.B.total)/Math.max(out.A.total, out.B.total)) * 100;
+    if (pPct < 0.5) {
+      v.textContent = "≈ Same price (within 0.5%)";
+      v.classList.add("tie");
+    } else {
+      v.textContent = "✅ " + (aCheap ? "A" : "B") + " is cheaper — " + pPct.toFixed(1) + "% less (" + money(worse.total - better.total) + " saved)";
+    }
     return;
   }
 
@@ -274,8 +294,8 @@ function recalc(){
     v.classList.add("tie");
     return;
   }
-  var aCheap = out.A.per < out.B.per;
-  var winner = aCheap ? "A" : "B";
+  var aCheapU = out.A.per < out.B.per;
+  var winner = aCheapU ? "A" : "B";
   var pct = (1 - Math.min(out.A.per, out.B.per)/Math.max(out.A.per, out.B.per)) * 100;
   v.textContent = "✅ " + winner + " is better value — " + pct.toFixed(1) + "% less per " + baseUnit(out.A.dim);
 
