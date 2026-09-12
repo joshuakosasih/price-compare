@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Price Compare — cross-currency unit price</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f2f4f7; color: #1a1d21; padding: 16px; max-width: 560px; margin: 0 auto;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #14161a; color: #e8eaed; }
+    .card, .result { background: #1e2127 !important; }
+    input, select { background: #262a31 !important; color: #e8eaed !important; border-color: #3a4048 !important; }
+    .note { color: #9aa0a6 !important; }
+  }
+  h1 { font-size: 1.15rem; margin-bottom: 4px; }
+  .note { font-size: 0.72rem; color: #5f6570; margin-bottom: 14px; }
+  .card {
+    background: #fff; border-radius: 14px; padding: 14px; margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  .card h2 { font-size: 0.95rem; margin-bottom: 10px; }
+  .row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .row:last-child { margin-bottom: 0; }
+  .field { flex: 1; min-width: 0; }
+  label { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; margin-bottom: 4px; }
+  input, select {
+    width: 100%; padding: 10px; font-size: 1rem; border: 1px solid #d3d7de;
+    border-radius: 9px; background: #fff; color: #111;
+  }
+  input:focus, select:focus { outline: 2px solid #3b82f6; border-color: transparent; }
+  .grow2 { flex: 2; }
+  .basebar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .basebar select { max-width: 130px; }
+  .linkbar { display: flex; justify-content: center; margin: 2px 0 12px; }
+  button { padding: 8px 14px; font-size: 0.82rem; border: 1px solid #d3d7de; background: #fff; border-radius: 999px; color: #374151; }
+  button.on { background: #3b82f6; border-color: #3b82f6; color: #fff; font-weight: 600; }
+  @media (prefers-color-scheme: dark) { button { background: #262a31; color: #e8eaed; border-color: #3a4048; } button.on { background: #3b82f6; color: #fff; } }
+  .result {
+    background: #fff; border-radius: 14px; padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  .line { display: flex; justify-content: space-between; padding: 7px 0; font-size: 0.95rem; border-bottom: 1px solid #eceef1; gap: 8px; }
+  .line:last-of-type { border-bottom: none; }
+  .sub { font-size: 0.85rem; color: #4b5563; padding: 5px 0; }
+  .sub b { color: #047857; }
+  @media (prefers-color-scheme: dark) { .line { border-color: #2a2e35; } .sub { color: #9aa0a6; } .sub b { color: #34d399; } }
+  .verdict { margin-top: 10px; font-size: 0.98rem; font-weight: 700; text-align: center; padding: 10px; border-radius: 9px; background: #ecfdf5; color: #065f46; }
+  @media (prefers-color-scheme: dark) { .verdict { background: #10342a; color: #6ee7b7; } }
+  .verdict.tie { background: #eef2f7; color: #475569; }
+  @media (prefers-color-scheme: dark) { .verdict.tie { background: #262a31; color: #9aa0a6; } }
+  .fx { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 0.72rem; color: #6b7280; }
+</style>
+</head>
+<body>
+  <h1>⚖️ Cross-currency price compare</h1>
+  <div class="note">Enter price + currency + quantity for two products (weight or volume). Pack prices convert to your base currency; unit price shows better value; diff lines show savings at each pack size.</div>
+
+  <div class="basebar">
+    <label for="base">Compare in</label>
+    <select id="base"></select>
+  </div>
+
+  <div class="card">
+    <h2>🅰️ Product A</h2>
+    <div class="row">
+      <div class="field grow2"><label>Price</label><input id="priceA" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 89000"></div>
+      <div class="field"><label>Currency</label><select id="curA"></select></div>
+    </div>
+    <div class="row">
+      <div class="field grow2"><label>Quantity</label><input id="wtA" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 350"></div>
+      <div class="field"><label>Unit</label>
+        <select id="unitA">
+          <option value="kg">kg</option><option value="g" selected>g</option>
+          <option value="lb">lb</option><option value="oz">oz</option>
+          <option value="L">L</option><option value="ml">ml</option>
+          <option value="gal">gal</option><option value="floz">fl oz</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="linkbar"><button id="sameQty">🔗 Same quantity</button></div>
+
+  <div class="card">
+    <h2>🅱️ Product B</h2>
+    <div class="row">
+      <div class="field grow2"><label>Price</label><input id="priceB" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 12.90"></div>
+      <div class="field"><label>Currency</label><select id="curB"></select></div>
+    </div>
+    <div class="row">
+      <div class="field grow2"><label>Quantity</label><input id="wtB" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 200"></div>
+      <div class="field"><label>Unit</label>
+        <select id="unitB">
+          <option value="kg">kg</option><option value="g" selected>g</option>
+          <option value="lb">lb</option><option value="oz">oz</option>
+          <option value="L">L</option><option value="ml">ml</option>
+          <option value="gal">gal</option><option value="floz">fl oz</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="result">
+    <div class="line"><span id="packALabel">A pack</span><span id="packA">—</span></div>
+    <div class="line"><span id="packBLabel">B pack</span><span id="packB">—</span></div>
+    <div class="line"><span>Unit price — A · B</span><span id="perunit">—</span></div>
+    <div class="verdict" id="verdict">Enter both products to compare</div>
+    <div id="diffs"></div>
+    <div class="fx">
+      <span id="fxnote">loading rates…</span>
+      <button id="refresh">↻ refresh rates</button>
+    </div>
+  </div>
+
+<script>
+"use strict";
+// Offline fallback snapshot (real rates, fetched 2026-09-12 00:02 UTC)
+var FALLBACK_USD = {SGD:1.267129,IDR:17606.126888,MYR:4.068695,USD:1,EUR:0.862019,GBP:0.739517,JPY:153.7596,CNY:6.725314,AUD:1.394712,HKD:7.84246,TWD:31.577975,THB:33.025828,PHP:62.689229,VND:25887.097637,INR:95.601765,KRW:1342.534479,CHF:0.816057,AED:3.6725,CAD:1.386112,NZD:1.719599,BRL:5.105193,ZAR:16.139976,TRY:48.60301,SEK:9.697751,NOK:9.289967,DKK:6.446841,MXN:16.968909,PKR:277.716932,BDT:123.292723,LKR:328.251404,MMK:2101.510832,KHR:4044.034177};
+var FALLBACK_DATE = "2026-09-12";
+var COMMON = ["SGD","IDR","USD","MYR","EUR","GBP","JPY","CNY","AUD","HKD","TWD","THB","PHP","VND","INR","KRW"];
+var rates = null;
+var sameQty = false, syncing = false;
+
+function $(id){ return document.getElementById(id); }
+
+// canonical base: litres for volume, kg for weight
+var TO_BASE = {kg:1, g:0.001, lb:0.45359237, oz:0.028349523125, L:1, ml:0.001, gal:3.785411784, floz:0.0295735295625};
+function dim(u){ return (u==="L"||u==="ml"||u==="gal"||u==="floz") ? "V" : "W"; }
+function baseUnit(d){ return d === "V" ? "L" : "kg"; }
+function qtyBase(wt, u){ var v = parseFloat(wt); return isFinite(v) ? v * (TO_BASE[u] || 0) : NaN; }
+
+function setRates(usdRates, date, live){
+  rates = usdRates;
+  $("fxnote").textContent = (live ? "Live rates" : "⚠️ Offline snapshot") + " · " + date + " · open.er-api.com";
+  fillSelects();
+  recalc();
+}
+
+function curList(){
+  var all = Object.keys(rates).sort();
+  return COMMON.filter(function(c){ return rates[c] !== undefined; }).concat(all.filter(function(c){ return COMMON.indexOf(c) === -1; }));
+}
+
+function fillSelects(){
+  var list = curList();
+  ["base","curA","curB"].forEach(function(id){
+    var sel = $(id), keep = sel.value;
+    sel.innerHTML = "";
+    list.forEach(function(c){
+      var o = document.createElement("option");
+      o.value = c; o.textContent = c;
+      sel.appendChild(o);
+    });
+    sel.value = keep && list.indexOf(keep) !== -1 ? keep : (id === "base" || id === "curA" ? "SGD" : keep || "SGD");
+    if (!sel.value) sel.value = list[0];
+  });
+}
+
+function loadRates(){
+  $("fxnote").textContent = "loading rates…";
+  fetch("https://open.er-api.com/v6/latest/USD")
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d && d.result === "success" && d.rates) {
+        setRates(d.rates, (d.time_last_update_utc || "").slice(0, 16), true);
+      } else { throw new Error("bad response"); }
+    })
+    .catch(function(){
+      setRates(FALLBACK_USD, FALLBACK_DATE + " (stale)", false);
+    });
+}
+
+function toBase(amount, cur, base){
+  return amount / rates[cur] * rates[base];
+}
+
+function money(n){
+  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " " + $("base").value;
+}
+
+function fmtUnit(n, d){
+  if (!isFinite(n)) return "—";
+  var digits = n >= 1000 ? 0 : n >= 100 ? 1 : 2;
+  return n.toLocaleString(undefined, { maximumFractionDigits: digits }) + " " + $("base").value + "/" + baseUnit(d);
+}
+
+function packLabel(k){
+  var wt = parseFloat($("wt"+k).value);
+  var unit = $("unit"+k).value;
+  var v = parseFloat($("price"+k).value);
+  var cur = $("cur"+k).value;
+  var bits = [];
+  if (isFinite(v) && v > 0 && cur) bits.push(v.toLocaleString(undefined,{maximumFractionDigits:2}) + " " + cur);
+  if (isFinite(wt) && wt > 0) bits.push(wt.toLocaleString(undefined,{maximumFractionDigits:3}) + " " + unit);
+  return (k === "A" ? "A" : "B") + (bits.length ? " (" + bits.join(", ") + ")" : " pack");
+}
+
+function qtyText(k){
+  var wt = parseFloat($("wt"+k).value);
+  return isFinite(wt) ? wt.toLocaleString(undefined,{maximumFractionDigits:3}) + " " + $("unit"+k).value : "";
+}
+
+function setSameQty(on){
+  sameQty = on;
+  var b = $("sameQty");
+  b.classList.toggle("on", on);
+  b.textContent = on ? "🔗 Same quantity: ON" : "🔗 Same quantity";
+  if (on) syncQty("A");
+  recalc();
+}
+
+function syncQty(src){
+  if (!sameQty || syncing) return;
+  syncing = true;
+  var other = src === "A" ? "B" : "A";
+  $("wt"+other).value = $("wt"+src).value;
+  $("unit"+other).value = $("unit"+src).value;
+  syncing = false;
+}
+
+function recalc(){
+  $("packALabel").textContent = packLabel("A");
+  $("packBLabel").textContent = packLabel("B");
+  var base = $("base").value;
+  var out = {};
+  ["A","B"].forEach(function(k){
+    var price = parseFloat($("price"+k).value);
+    var q = qtyBase($("wt"+k).value, $("unit"+k).value);
+    var cur = $("cur"+k).value;
+    var d = dim($("unit"+k).value);
+    var ok = price > 0 && q > 0 && rates && rates[cur] && rates[base];
+    out[k] = {
+      total: ok ? toBase(price, cur, base) : NaN,
+      per:   ok ? toBase(price, cur, base)/q : NaN,
+      dim: d, wt: parseFloat($("wt"+k).value), unit: $("unit"+k).value
+    };
+    $("pack"+k).textContent = ok ? money(out[k].total) : "—";
+  });
+
+  var aOK = isFinite(out.A.per), bOK = isFinite(out.B.per);
+  var sameDim = out.A.dim === out.B.dim;
+  if (aOK && bOK) {
+    $("perunit").textContent = fmtUnit(out.A.per, out.A.dim) + (sameDim ? " · " : "  |  ") + fmtUnit(out.B.per, out.B.dim);
+  } else {
+    $("perunit").textContent = aOK ? fmtUnit(out.A.per, out.A.dim) : bOK ? fmtUnit(out.B.per, out.B.dim) : "—";
+  }
+
+  var v = $("verdict");
+  v.classList.remove("tie");
+  var diffs = $("diffs");
+  diffs.innerHTML = "";
+  if (!(aOK && bOK)) { v.textContent = "Enter price + quantity for both products"; return; }
+
+  if (!sameDim) {
+    v.textContent = "⚠️ A is " + (out.A.dim === "V" ? "volume" : "weight") + ", B is " + (out.B.dim === "V" ? "volume" : "weight") + " — pack prices only, no unit-price ranking";
+    v.classList.add("tie");
+    return;
+  }
+
+  if (Math.abs(out.A.per - out.B.per) / Math.max(out.A.per, out.B.per) < 0.005) {
+    v.textContent = "≈ Same unit price (within 0.5%)";
+    v.classList.add("tie");
+    return;
+  }
+  var aCheap = out.A.per < out.B.per;
+  var winner = aCheap ? "A" : "B";
+  var pct = (1 - Math.min(out.A.per, out.B.per)/Math.max(out.A.per, out.B.per)) * 100;
+  v.textContent = "✅ " + winner + " is better value — " + pct.toFixed(1) + "% less per " + baseUnit(out.A.dim);
+
+  function diffLine(mySize){
+    var me = mySize, other = me === "A" ? "B" : "A";
+    if (!(isFinite(out[me].total) && isFinite(out[other].per))) return;
+    var otherAtMySize = out[other].per * qtyBase(out[me].wt, out[me].unit);
+    var save = out[me].total - otherAtMySize;
+    var w = save > 0 ? other : me;
+    var row = document.createElement("div");
+    row.className = "sub";
+    row.innerHTML = "At " + qtyText(me) + ": " + me + " = " + money(out[me].total) + " · " +
+      other + " ≈ " + money(otherAtMySize) + " → <b>" + w + " saves " + money(Math.abs(save)) + "</b>";
+    diffs.appendChild(row);
+  }
+  if (sameQty) {
+    diffLine("A");
+  } else {
+    diffLine("A"); diffLine("B");
+  }
+}
+
+["base","curA","curB","unitA","unitB"].forEach(function(id){ $(id).addEventListener("change", recalc); });
+["priceA","priceB"].forEach(function(id){ $(id).addEventListener("input", recalc); });
+["wtA","unitA"].forEach(function(id){
+  $(id).addEventListener(id === "wtA" ? "input" : "change", function(){ syncQty("A"); recalc(); });
+});
+["wtB","unitB"].forEach(function(id){
+  $(id).addEventListener(id === "wtB" ? "input" : "change", function(){ syncQty("B"); recalc(); });
+});
+$("sameQty").addEventListener("click", function(){ setSameQty(!sameQty); });
+$("refresh").addEventListener("click", loadRates);
+
+loadRates();
+</script>
+</body>
+</html>
