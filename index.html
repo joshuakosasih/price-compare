@@ -43,10 +43,10 @@
   .grow2 { flex: 2; }
   .basebar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
   .basebar select { max-width: 130px; }
-  .linkbar { display: flex; justify-content: center; margin: 2px 0 12px; }
-  button { padding: 8px 14px; font-size: 0.82rem; border: 1px solid #d3d7de; background: #fff; border-radius: 999px; color: #374151; }
-  button.on { background: #3b82f6; border-color: #3b82f6; color: #fff; font-weight: 600; }
-  @media (prefers-color-scheme: dark) { button { background: #262a31; color: #e8eaed; border-color: #3a4048; } button.on { background: #3b82f6; color: #fff; } }
+  button { padding: 7px 12px; font-size: 0.78rem; border: 1px solid #d3d7de; background: #fff; border-radius: 8px; color: #374151; }
+  @media (prefers-color-scheme: dark) { button { background: #262a31; color: #e8eaed; border-color: #3a4048; } }
+  .chip { display: inline-block; font-size: 0.72rem; font-weight: 600; color: #047857; background: #d1fae5; border-radius: 999px; padding: 4px 10px; margin-bottom: 10px; }
+  @media (prefers-color-scheme: dark) { .chip { color: #6ee7b7; background: #10342a; } }
   .result {
     background: #fff; border-radius: 14px; padding: 16px;
     box-shadow: 0 1px 3px rgba(0,0,0,.08);
@@ -95,8 +95,6 @@
     </div>
   </div>
 
-  <div class="linkbar"><button id="sameQty">🔗 Same quantity</button></div>
-
   <div class="card">
     <h2>🅱️ Product B</h2>
     <div class="row">
@@ -120,6 +118,7 @@
     <div class="line"><span id="packALabel">A pack</span><span id="packA">—</span></div>
     <div class="line"><span id="packBLabel">B pack</span><span id="packB">—</span></div>
     <div class="line"><span>Unit price — A · B</span><span id="perunit">—</span></div>
+    <div class="chip" id="qtyChip" hidden>⚖ Same quantity</div>
     <div class="verdict" id="verdict">Enter both products to compare</div>
     <div id="diffs"></div>
     <div class="fx">
@@ -137,7 +136,6 @@ var FALLBACK_USD = {SGD:1.267129,IDR:17606.126888,MYR:4.068695,USD:1,EUR:0.86201
 var FALLBACK_DATE = "2026-09-12";
 var COMMON = ["SGD","IDR","USD","MYR","EUR","GBP","JPY","CNY","AUD","HKD","TWD","THB","PHP","VND","INR","KRW"];
 var rates = null;
-var sameQty = false, syncing = false;
 
 function $(id){ return document.getElementById(id); }
 
@@ -218,25 +216,17 @@ function qtyText(k){
   return isFinite(wt) ? wt.toLocaleString(undefined,{maximumFractionDigits:3}) + " " + $("unit"+k).value : "";
 }
 
-function setSameQty(on){
-  sameQty = on;
-  var b = $("sameQty");
-  b.classList.toggle("on", on);
-  b.textContent = on ? "🔗 Same quantity: ON" : "🔗 Same quantity";
-  if (on) syncQty("A");
-  recalc();
-}
-
-function syncQty(src){
-  if (!sameQty || syncing) return;
-  syncing = true;
-  var other = src === "A" ? "B" : "A";
-  $("wt"+other).value = $("wt"+src).value;
-  $("unit"+other).value = $("unit"+src).value;
-  syncing = false;
-}
-
 function recalc(){
+  // convenience: typing the first quantity fills the other while it's still empty
+  ["A","B"].forEach(function(k){
+    var dst = k === "A" ? "B" : "A";
+    if ($("wt"+k).value !== "" && $("wt"+dst).value === "") {
+      $("wt"+dst).value = $("wt"+k).value;
+      $("unit"+dst).value = $("unit"+k).value;
+    }
+  });
+  var qtySame = $("wtA").value !== "" && $("wtA").value === $("wtB").value && $("unitA").value === $("unitB").value;
+  $("qtyChip").hidden = !qtySame;
   $("packALabel").textContent = packLabel("A");
   $("packBLabel").textContent = packLabel("B");
   var base = $("base").value;
@@ -317,22 +307,12 @@ function recalc(){
       other + " ≈ " + money(otherAtMySize) + " → <b>" + w + " saves " + money(Math.abs(save)) + "</b>";
     diffs.appendChild(row);
   }
-  if (sameQty) {
-    diffLine("A");
-  } else {
-    diffLine("A"); diffLine("B");
-  }
+  diffLine("A");
+  if (!qtySame) diffLine("B");
 }
 
 ["base","curA","curB","unitA","unitB"].forEach(function(id){ $(id).addEventListener("change", recalc); });
-["priceA","priceB"].forEach(function(id){ $(id).addEventListener("input", recalc); });
-["wtA","unitA"].forEach(function(id){
-  $(id).addEventListener(id === "wtA" ? "input" : "change", function(){ syncQty("A"); recalc(); });
-});
-["wtB","unitB"].forEach(function(id){
-  $(id).addEventListener(id === "wtB" ? "input" : "change", function(){ syncQty("B"); recalc(); });
-});
-$("sameQty").addEventListener("click", function(){ setSameQty(!sameQty); });
+["priceA","priceB","wtA","wtB"].forEach(function(id){ $(id).addEventListener("input", recalc); });
 $("refresh").addEventListener("click", loadRates);
 
 if ('serviceWorker' in navigator) {
