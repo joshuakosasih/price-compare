@@ -45,8 +45,6 @@
   .basebar select { max-width: 130px; }
   button { padding: 7px 12px; font-size: 0.78rem; border: 1px solid #d3d7de; background: #fff; border-radius: 8px; color: #374151; }
   @media (prefers-color-scheme: dark) { button { background: #262a31; color: #e8eaed; border-color: #3a4048; } }
-  .chip { display: inline-block; font-size: 0.72rem; font-weight: 600; color: #047857; background: #d1fae5; border-radius: 999px; padding: 4px 10px; margin-bottom: 10px; }
-  @media (prefers-color-scheme: dark) { .chip { color: #6ee7b7; background: #10342a; } }
   .result {
     background: #fff; border-radius: 14px; padding: 16px;
     box-shadow: 0 1px 3px rgba(0,0,0,.08);
@@ -118,14 +116,13 @@
     <div class="line"><span id="packALabel">A pack</span><span id="packA">—</span></div>
     <div class="line"><span id="packBLabel">B pack</span><span id="packB">—</span></div>
     <div class="line"><span>Unit price — A · B</span><span id="perunit">—</span></div>
-    <div class="chip" id="qtyChip" hidden>⚖ Same quantity</div>
     <div class="verdict" id="verdict">Enter both products to compare</div>
     <div id="diffs"></div>
     <div class="fx">
       <span id="fxnote">loading rates…</span>
       <button id="refresh">↻ refresh rates</button>
     </div>
-    <div style="text-align:center; font-size:0.68rem; color:#9aa0a6; margin-top:8px;"><span id="appver">v8</span></div>
+    <div style="text-align:center; font-size:0.68rem; color:#9aa0a6; margin-top:8px;"><span id="appver">v9</span></div>
   </div>
 
   <div class="fb"><a href="https://docs.google.com/forms/d/e/1FAIpQLSeJ4P2Ch76kIHVl6KZBA1MNx8pil4kZ32nLrQDQLr8oKQllVg/viewform?usp=pp_url&entry.267710623=price-compare" target="_blank" rel="noopener">💬 Send feedback</a></div>
@@ -218,8 +215,6 @@ function qtyText(k){
 }
 
 function recalc(){
-  var qtySame = $("wtA").value !== "" && $("wtA").value === $("wtB").value && $("unitA").value === $("unitB").value;
-  $("qtyChip").hidden = !qtySame;
   $("packALabel").textContent = packLabel("A");
   $("packBLabel").textContent = packLabel("B");
   var base = $("base").value;
@@ -301,7 +296,7 @@ function recalc(){
     diffs.appendChild(row);
   }
   diffLine("A");
-  if (!qtySame) diffLine("B");
+  diffLine("B");
 }
 
 ["base","curA","curB","unitA","unitB"].forEach(function(id){ $(id).addEventListener("change", recalc); });
