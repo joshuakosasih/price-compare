@@ -217,14 +217,6 @@ function qtyText(k){
 }
 
 function recalc(){
-  // convenience: typing the first quantity fills the other while it's still empty
-  ["A","B"].forEach(function(k){
-    var dst = k === "A" ? "B" : "A";
-    if ($("wt"+k).value !== "" && $("wt"+dst).value === "") {
-      $("wt"+dst).value = $("wt"+k).value;
-      $("unit"+dst).value = $("unit"+k).value;
-    }
-  });
   var qtySame = $("wtA").value !== "" && $("wtA").value === $("wtB").value && $("unitA").value === $("unitB").value;
   $("qtyChip").hidden = !qtySame;
   $("packALabel").textContent = packLabel("A");
