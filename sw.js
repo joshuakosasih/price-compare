@@ -1,5 +1,5 @@
 /* Price Compare service worker — offline shell */
-var CACHE = "price-compare-v7";
+var CACHE = "price-compare-v8";
 var ASSETS = [
   "./",
   "./index.html",
